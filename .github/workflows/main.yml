@@ -24,8 +24,8 @@ jobs:
           file: .
           push: true
           tags: |
-            matheuscardosoKono/matheuscardoso:v1
-            matheuscardosoKono/matheuscardoso:latest
+            matheuscardosokono/matheuscardoso:v1
+            matheuscardosokono/matheuscardoso:latest
         
 
           
