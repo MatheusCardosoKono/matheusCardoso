@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+    environment {
+        JAVA_EXECUTABLE = 'C:\\Program Files\\Common Files\\Oracle\\Java\\javapath\\java.exe'
+        OWASP_ZAP_PATH = "C:\\Program Files\\OWASP\\Zed Attack Proxy"
+        GITHUB_REPO_URL = "https://matheuscardosokono.github.io/matheusCardoso/"
+        TELEGRAM_BOT_TOKEN = "6535166112:AAGXXWlzJ6HdWjXZVmI-CLAZTRZwZg0TOAk"
+        TELEGRAM_CHAT_ID = "5538077058"
+    }
+    stages {
+        stage('Build') {
+            steps {
+                bat 'copy C:\\Users\\Matheus\\Desktop\\Unity\\mat\\matheusCardoso\\index.html C:\\Users\\Matheus\\Desktop\\Unity\\mat\\implementacao\\build\\'
+            }
+        }
+        stage('Test with OWASP ZAP') {
+            steps {
+                script {
+                    def owaspZapOutput = bat returnStatus: true, script: """
+                        "${JAVA_EXECUTABLE}" -Xmx512m -jar "${OWASP_ZAP_PATH}\\zap-2.13.0.jar" -cmd -quickurl "${GITHUB_REPO_URL}"
+                    """
+                    if (owaspZapOutput == 0) {
+                        echo "Testes do OWASP ZAP concluídos com sucesso."
+                        currentBuild.result = 'SUCCESS' // Define o resultado do build como sucesso
+                    } else {
+                        error "Erro ao executar os testes do OWASP ZAP."
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } // Executa esta etapa apenas se o build for bem-sucedido
+            }
+            steps {
+                bat 'xcopy /E /I /Y C:\\Users\\Matheus\\Desktop\\Unity\\mat\\matheusCardoso\\index.html C:\\Users\\Matheus\\Desktop\\Unity\\mat\\implementacao\\build\\'
+
+                echo "Deploy concluído :D"
+
+                script {
+                    def sendMessageCommand = """
+                        curl -X POST -H "Content-Type: application/json" -d "{\\"chat_id\\":\\"${TELEGRAM_CHAT_ID}\\",\\"text\\":\\"Estagio Test with OWASP ZAP: Testes do OWASP ZAP concluidos com sucesso.\\nResultado do build: SUCCESS\\"}" https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage
+                    """
+                    def sendMessageResult = bat returnStatus: true, script: sendMessageCommand
+
+                    if (sendMessageResult == 0) {
+                        echo "Notificacao de deploy enviada com sucesso para o Telegram."
+                    } else {
+                        error "Erro ao enviar notificacao de deploy para o Telegram."
+                    }
+                }
+            }
+        }
+    }
+}
